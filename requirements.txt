@@ -1,0 +1,7 @@
+torch==2.2.0
+torchvision==0.17.0
+captum
+streamlit==1.30.0
+Pillow==8.2.0  
+numpy==1.21.0
+matplotlib==3.4.2
