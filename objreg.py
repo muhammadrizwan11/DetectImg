@@ -1,18 +1,22 @@
 
 import streamlit as st
-import matplotlib.pyplot as plt
 from PIL import Image
 import numpy as np
+import matplotlib.pyplot as plt
+import torch
 from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2, FasterRCNN_ResNet50_FPN_V2_Weights
 from torchvision.utils import draw_bounding_boxes
-import torch
 import zipfile
 import os
+import io
+
+# Load categories
+categories = FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT.meta["categories"]
 
 # Function to load the model
+# Define weights outside of the functions
 weights = FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
 
-@st.cache_resource
 def load_model():
     model = fasterrcnn_resnet50_fpn_v2(weights=weights, box_score_thresh=0.5)
     model.eval()
@@ -22,7 +26,7 @@ model = load_model()
 
 # Function to make predictions
 def make_prediction(img):
-    img_preprocess = weights.transforms()
+    img_preprocess = FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT.transforms()
     img_processed = img_preprocess(img)
     prediction = model(img_processed.unsqueeze(0))[0]
     prediction["labels"] = [categories[label] for label in prediction["labels"]]
@@ -58,39 +62,70 @@ def handle_dataset_upload(zip_file):
     return images
 
 # Dashboard
-st.title("Object Detector :tea: :coffee:")
+st.title("Object Detector ")
 
-# Load categories
-categories = weights.meta["categories"]
+# # Clear cache
+# st.caching.clear_cache()
 
-# Step 1: Upload ZIP Dataset
-upload_dataset = st.file_uploader(label="Upload Dataset (ZIP file format):", type=["zip"])
+# Step 1: Upload ZIP Dataset or Single Image
+upload_file = st.file_uploader(label="Upload Dataset (ZIP file) or Single Image:", type=["zip"])
 
-if upload_dataset:
-    # Handle dataset upload and extract images
-    images = handle_dataset_upload(upload_dataset)
+# Check if a file is uploaded
+if upload_file:
+    if zipfile.is_zipfile(upload_file):
+        # Handle dataset upload and extract images
+        images = handle_dataset_upload(upload_file)
 
-    # Display the extracted images and predictions
-    for image in images:
-        # Display the uploaded image
-        st.image(image, caption="Uploaded Image", use_column_width=True)
+        # Display the extracted images and predictions
+        for image in images:
+            # Display the uploaded image
+            st.image(image, caption="Uploaded Image", use_column_width=True)
+
+            # Make predictions and display bounding boxes
+            image = image.convert('RGB')
+            prediction = make_prediction(image)
+            img_with_bbox = create_image_with_bboxes(np.array(image).transpose(2, 0, 1), prediction)
+
+            # Display the image with bounding boxes
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(111)
+            plt.imshow(img_with_bbox)
+            plt.xticks([], [])
+            plt.yticks([], [])
+            ax.spines[["top", "bottom", "right", "left"]].set_visible(False)
+            st.pyplot(fig, use_container_width=True)
+
+            # Display predicted probabilities
+            del prediction["boxes"]
+            st.header("Predicted Probabilities")
+            st.write(prediction)
+
+    else:
+        # Single Image Prediction
+        uploaded_image = Image.open(upload_file)
+        st.image(uploaded_image, caption="Uploaded Image", use_column_width=True)
 
         # Make predictions and display bounding boxes
-        image = image.convert('RGB')
-        prediction = make_prediction(image)
-        img_with_bbox = create_image_with_bboxes(np.array(image).transpose(2, 0, 1), prediction)
+        prediction = make_prediction(uploaded_image)
+        img_with_bbox = create_image_with_bboxes(np.array(uploaded_image).transpose(2, 0, 1), prediction)
 
         # Display the image with bounding boxes
-        fig, ax = plt.subplots(figsize=(12, 12))
-        ax.imshow(img_with_bbox)
-        ax.set_xticks([])
-        ax.set_yticks([])
-        for spine in ax.spines.values():
-            spine.set_visible(False)
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(111)
+        plt.imshow(img_with_bbox)
+        plt.xticks([], [])
+        plt.yticks([], [])
+        ax.spines[["top", "bottom", "right", "left"]].set_visible(False)
         st.pyplot(fig, use_container_width=True)
 
         # Display predicted probabilities
         del prediction["boxes"]
         st.header("Predicted Probabilities")
-        st.write(prediction, style={"labels": {"font-size": "20px"}})
+        st.write(prediction)
+        
+        
+
+
+
+
 
