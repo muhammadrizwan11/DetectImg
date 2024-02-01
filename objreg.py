@@ -1,4 +1,3 @@
-
 import streamlit as st
 from PIL import Image
 import numpy as np
@@ -8,13 +7,11 @@ from torchvision.models.detection import fasterrcnn_resnet50_fpn_v2, FasterRCNN_
 from torchvision.utils import draw_bounding_boxes
 import zipfile
 import os
-import io
 
 # Load categories
 categories = FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT.meta["categories"]
 
 # Function to load the model
-# Define weights outside of the functions
 weights = FasterRCNN_ResNet50_FPN_V2_Weights.DEFAULT
 
 def load_model():
@@ -64,9 +61,6 @@ def handle_dataset_upload(zip_file):
 # Dashboard
 st.title("Object Detector ")
 
-# # Clear cache
-# st.caching.clear_cache()
-
 # Step 1: Upload ZIP Dataset or Single Image
 upload_file = st.file_uploader(label="Upload Dataset (ZIP file) or Single Image:", type=["zip"])
 
@@ -87,17 +81,12 @@ if upload_file:
             img_with_bbox = create_image_with_bboxes(np.array(image).transpose(2, 0, 1), prediction)
 
             # Display the image with bounding boxes
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(111)
-            plt.imshow(img_with_bbox)
-            plt.xticks([], [])
-            plt.yticks([], [])
-            ax.spines[["top", "bottom", "right", "left"]].set_visible(False)
-            st.pyplot(fig, use_container_width=True)
+            st.subheader("Image with Bounding Boxes")
+            st.image(img_with_bbox, use_column_width=True)
 
             # Display predicted probabilities
             del prediction["boxes"]
-            st.header("Predicted Probabilities")
+            st.subheader("Predicted Probabilities")
             st.write(prediction)
 
     else:
@@ -110,22 +99,10 @@ if upload_file:
         img_with_bbox = create_image_with_bboxes(np.array(uploaded_image).transpose(2, 0, 1), prediction)
 
         # Display the image with bounding boxes
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(111)
-        plt.imshow(img_with_bbox)
-        plt.xticks([], [])
-        plt.yticks([], [])
-        ax.spines[["top", "bottom", "right", "left"]].set_visible(False)
-        st.pyplot(fig, use_container_width=True)
+        st.subheader("Image with Bounding Boxes")
+        st.image(img_with_bbox, use_column_width=True)
 
         # Display predicted probabilities
         del prediction["boxes"]
-        st.header("Predicted Probabilities")
+        st.subheader("Predicted Probabilities")
         st.write(prediction)
-        
-        
-
-
-
-
-
